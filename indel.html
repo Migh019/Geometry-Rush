@@ -1,0 +1,671 @@
+<!DOCTYPE html>
+<html lang="pt">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Geometry Rush</title>
+  <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700&family=Rajdhani:wght@500;700&display=swap" rel="stylesheet">
+  
+  <style>
+    :root {
+      --bg-color: #020205;
+      --panel-bg: #0a0a10;
+      --neon-primary: #00f0ff;
+      --neon-secondary: #ff0055;
+      --danger: #ff3333;
+      --success: #00ffaa;
+      --warning: #ffcc00;
+      --freeze: #aaddff;
+      --text-main: #e0e0e0;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      background-color: var(--bg-color);
+      background-image: radial-gradient(circle at center, #110522 0%, var(--bg-color) 100%);
+      color: var(--text-main);
+      font-family: 'Rajdhani', sans-serif;
+      display: flex; justify-content: center; align-items: center;
+      height: 100vh; overflow: hidden;
+    }
+
+    #app {
+      background: rgba(10, 10, 16, 0.9);
+      backdrop-filter: blur(10px);
+      border: 2px solid var(--neon-primary);
+      border-radius: 15px;
+      box-shadow: 0 0 30px rgba(0, 240, 255, 0.3), inset 0 0 15px rgba(0, 240, 255, 0.1);
+      width: 95%; max-width: 550px; padding: 25px;
+      position: relative;
+      transition: transform 0.1s;
+    }
+
+    /* Efeito de Tremor (Screen Shake) */
+    .shake { animation: shake 0.4s cubic-bezier(.36,.07,.19,.97) both; border-color: var(--danger) !important; box-shadow: 0 0 30px var(--danger) !important;}
+    @keyframes shake { 10%, 90% { transform: translate3d(-2px, 0, 0); } 20%, 80% { transform: translate3d(4px, 0, 0); } 30%, 50%, 70% { transform: translate3d(-8px, 0, 0); } 40%, 60% { transform: translate3d(8px, 0, 0); } }
+
+    .screen { display: none; flex-direction: column; gap: 15px; text-align: center; }
+    .screen.active { display: flex; animation: fadeIn 0.4s ease-out; }
+
+    h1, h2 { font-family: 'Orbitron', sans-serif; color: var(--neon-primary); text-shadow: 0 0 10px var(--neon-primary); }
+    h1 { font-size: 2.8rem; margin-bottom: 10px; }
+    h1 span { color: var(--neon-secondary); text-shadow: 0 0 15px var(--neon-secondary); }
+
+    .text-neon { color: var(--neon-primary); font-weight: bold; }
+    .text-gold { color: var(--warning); font-weight: bold; }
+    .save-stats { background: rgba(255,255,255,0.05); padding: 10px; border-radius: 8px; font-size: 1.1rem; border: 1px dashed #555; }
+
+    .menu-buttons { display: flex; flex-direction: column; gap: 12px; margin-top: 10px; }
+
+    /* Botões Padrão */
+    button {
+      font-family: 'Orbitron', sans-serif; cursor: pointer; border-radius: 8px;
+      transition: all 0.2s; font-size: 1rem; padding: 12px; text-transform: uppercase;
+      letter-spacing: 1px; border: none;
+    }
+    .glow-btn { background: rgba(0, 240, 255, 0.1); color: #fff; border: 2px solid var(--neon-primary); }
+    .glow-btn:hover { background: var(--neon-primary); color: #000; font-weight: bold; box-shadow: 0 0 20px var(--neon-primary); transform: scale(1.02); }
+    .outline-btn { background: transparent; color: #aaa; border: 1px solid #555; }
+    .outline-btn:hover { border-color: #fff; color: #fff; }
+
+    /* HUD */
+    .stats-bar { display: flex; justify-content: space-between; font-family: 'Orbitron', sans-serif; font-size: 0.95rem; border-bottom: 1px solid rgba(0, 240, 255, 0.3); padding-bottom: 10px; }
+    .combo-text { transition: all 0.3s; }
+    .combo-glowing { color: var(--warning) !important; text-shadow: 0 0 15px var(--warning), 0 0 30px var(--warning); font-size: 1.1rem; animation: pulse 0.5s infinite alternate; }
+
+    /* Efeitos Ativos (Badges) */
+    #active-effects { display: flex; gap: 10px; justify-content: center; height: 20px; }
+    .effect-badge { font-size: 0.8rem; font-weight: bold; padding: 2px 8px; border-radius: 12px; font-family: 'Orbitron', sans-serif; }
+    .effect-badge.freeze { background: rgba(170,221,255,0.2); color: var(--freeze); border: 1px solid var(--freeze); }
+    .effect-badge.gold { background: rgba(255,204,0,0.2); color: var(--warning); border: 1px solid var(--warning); }
+    .effect-badge { background: rgba(0,255,170,0.2); color: var(--success); border: 1px solid var(--success); }
+
+    /* Temporizador */
+    .timer-container { width: 100%; height: 14px; background: #222; border-radius: 7px; overflow: hidden; box-shadow: inset 0 0 5px #000; position: relative; }
+    #timer-bar { width: 100%; height: 100%; background: var(--success); transition: width 0.1s linear, background 0.3s; }
+    .timer-danger { background: var(--danger) !important; box-shadow: 0 0 15px var(--danger); animation: pulse-bg 0.5s infinite; }
+    .timer-frozen { background: var(--freeze) !important; box-shadow: 0 0 15px var(--freeze); }
+
+    /* SVG Visual Area */
+    .visual-area { height: 110px; display: flex; justify-content: center; align-items: center; animation: float 3s infinite ease-in-out; }
+    .visual-area svg { width: 90px; height: 90px; filter: drop-shadow(0 0 8px var(--neon-secondary)); }
+    .visual-area svg path, .visual-area svg rect, .visual-area svg ellipse, .visual-area svg line, .visual-area svg polygon { stroke: var(--neon-secondary); stroke-width: 2; fill: rgba(255, 0, 85, 0.15); }
+
+    /* Inputs e Textos das Perguntas */
+    .question-container h2 { font-size: 1.2rem; margin-bottom: 10px; color: #fff; text-shadow: none; font-family: 'Rajdhani', sans-serif; font-weight: bold; }
+    .formula-hint { color: var(--success); font-family: 'Orbitron', monospace; font-size: 1rem; margin-bottom: 10px; text-shadow: 0 0 5px var(--success);}
+    .input-group { display: flex; gap: 10px; }
+    input[type="number"] { flex: 1; padding: 12px; background: rgba(0,0,0,0.6); border: 2px solid var(--neon-primary); border-radius: 8px; color: #fff; font-size: 1.2rem; text-align: center; outline: none; font-family: 'Orbitron', sans-serif; transition: 0.3s; }
+    input[type="number"]:focus { box-shadow: 0 0 15px var(--neon-primary); }
+    input::-webkit-outer-spin-button, input::-webkit-inner-spin-button { -webkit-appearance: none; }
+
+    /* Múltipla Escolha - Letras legíveis e limpas */
+    .mc-group { display: flex; flex-direction: column; gap: 8px; }
+    .mc-btn { 
+      background: rgba(255,0,85,0.1); 
+      border: 1px solid var(--neon-secondary); 
+      color: #fff; 
+      padding: 12px; 
+      border-radius: 8px; 
+      transition: 0.2s; 
+      font-size: 1.15rem; 
+      font-family: 'Rajdhani', sans-serif; 
+      text-transform: none; 
+      letter-spacing: normal; 
+      font-weight: 700;
+    }
+    .mc-btn:hover { background: var(--neon-secondary); color: #000; box-shadow: 0 0 15px var(--neon-secondary); }
+
+    /* Barra de Ações */
+    .action-bar { display: flex; justify-content: center; gap: 10px; margin-top: 15px; }
+    .action-btn { background: #1a1a1a; border: 1px solid var(--neon-primary); color: var(--neon-primary); padding: 10px; font-size: 0.85rem; flex: 1;}
+    .action-btn:hover { background: var(--neon-primary); color: #000; box-shadow: 0 0 10px var(--neon-primary); }
+    .store-btn-fx { background: rgba(255, 204, 0, 0.1); border-color: var(--warning); color: var(--warning); }
+    .store-btn-fx:hover { background: var(--warning); color: #000; box-shadow: 0 0 15px var(--warning); }
+    .formula-btn-fx { background: rgba(0, 255, 170, 0.1); border-color: var(--success); color: var(--success); }
+    .formula-btn-fx:hover { background: var(--success); color: #000; box-shadow: 0 0 15px var(--success); }
+
+    /* Modais */
+    .modal { display: none; position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.85); backdrop-filter: blur(5px); z-index: 10; justify-content: center; align-items: center; border-radius: 15px; }
+    .modal.active { display: flex; animation: fadeIn 0.2s; }
+    .modal-content { background: var(--panel-bg); border: 1px solid var(--neon-secondary); padding: 20px; border-radius: 10px; width: 90%; max-width: 400px; display: flex; flex-direction: column; gap: 12px; text-align: center; box-shadow: 0 0 30px rgba(0,0,0,0.9); }
+    .warning-text { color: var(--danger); font-size: 0.85rem; font-weight: bold; animation: pulse 1s infinite alternate; margin-top: -5px; }
+    .store-items { display: flex; flex-direction: column; gap: 8px; max-height: 250px; overflow-y: auto; padding-right: 5px; }
+    .store-item { display: flex; justify-content: space-between; background: #15151a; border: 1px solid #444; padding: 12px; border-radius: 8px; color: #ddd; font-family: 'Rajdhani', sans-serif; font-size: 1rem; font-weight: bold; cursor: pointer; text-align: left; transition: 0.2s; }
+    .store-item:hover { border-color: var(--warning); color: var(--warning); background: rgba(255, 204, 0, 0.1); transform: scale(1.02); }
+
+    /* Conquistas & Toasts */
+    .achievements-list { max-height: 250px; overflow-y: auto; text-align: left; display: flex; flex-direction: column; gap: 5px; }
+    .ach { padding: 10px; border-bottom: 1px solid #333; opacity: 0.5; transition: 0.3s; background: #111; border-radius: 5px;}
+    .ach.unlocked { opacity: 1; border-left: 4px solid var(--warning); background: rgba(255,204,0,0.08); }
+    .ach h4 { color: var(--warning); font-size: 1rem; font-family: 'Orbitron', sans-serif; margin-bottom: 2px; }
+    .ach p { font-size: 0.85rem; color: #ccc; }
+    #toast-container { position: absolute; top: 20px; right: 20px; display: flex; flex-direction: column; gap: 10px; z-index: 100; pointer-events: none;}
+    .toast { background: rgba(10,10,10,0.95); border-left: 4px solid var(--warning); color: #fff; padding: 15px 20px; border-radius: 4px; font-family: 'Orbitron', sans-serif; font-size: 0.85rem; box-shadow: 0 0 15px rgba(0,0,0,0.8); animation: slideIn 0.3s, fadeOut 0.5s 2.5s forwards; }
+
+    @keyframes fadeIn { from { opacity: 0; transform: scale(0.95); } to { opacity: 1; transform: scale(1); } }
+    @keyframes float { 0% { transform: translateY(0); } 50% { transform: translateY(-10px); } 100% { transform: translateY(0); } }
+    @keyframes slideIn { from { transform: translateX(100%); opacity: 0;} to { transform: translateX(0); opacity: 1;} }
+    @keyframes fadeOut { to { opacity: 0; visibility: hidden; } }
+    @keyframes pulse { from { opacity: 0.8; } to { opacity: 1; transform: scale(1.05); } }
+    @keyframes pulse-bg { 0% { background: var(--danger); } 50% { background: #880000; } 100% { background: var(--danger); } }
+  </style>
+</head>
+<body>
+
+  <div id="app">
+    <!-- Ecrã Inicial -->
+    <div id="start-screen" class="screen active">
+      <h1>Geometry <span>Rush</span></h1>
+      <div class="save-stats">
+        <p>Recorde: <span id="save-highscore" class="text-neon">0</span> | Nível Máx: <span id="save-maxlevel" class="text-neon">1</span></p>
+        <p>Moedas Acumuladas: <span id="save-coins" class="text-gold">0</span> 🪙</p>
+      </div>
+      <div class="menu-buttons">
+        <button id="start-btn" class="glow-btn">Iniciar Jogo</button>
+        <button id="upgrades-menu-btn" class="glow-btn text-gold">⚙️ Upgrades Permanentes</button>
+        <button id="achievements-menu-btn" class="outline-btn">Troféus</button>
+      </div>
+    </div>
+
+    <!-- Ecrã de Jogo -->
+    <div id="game-screen" class="screen">
+      <div class="stats-bar">
+        <div class="stat-box">Nível <span id="level-display">1</span></div>
+        <div class="stat-box" style="color: #ffcc00;">🪙 <span id="coins-display">0</span></div>
+        <div class="stat-box">Pts: <span id="score-display">0</span></div>
+        <div class="stat-box combo-text" id="combo-container">Combo <span id="combo-display">x1</span></div>
+      </div>
+      
+      <div class="timer-container">
+        <div id="timer-bar"></div>
+      </div>
+
+      <!-- Indicadores de Efeitos Ativos -->
+      <div id="active-effects">
+        <span id="shield-indicator" class="effect-badge" style="display: none;">🛡️ Escudo</span>
+        <span id="freeze-indicator" class="effect-badge freeze" style="display: none;">❄️ Congelado</span>
+        <span id="mult-indicator" class="effect-badge gold" style="display: none;">💰 2x Moedas (<span id="mult-count">0</span>)</span>
+      </div>
+
+      <div class="visual-area" id="shape-container">
+        <!-- SVG injetado aqui -->
+      </div>
+
+      <div class="question-container">
+        <h2 id="question-text">A carregar...</h2>
+        <p class="formula-hint" id="formula-display" style="display: none;"></p>
+        
+        <!-- Input para Respostas Numéricas -->
+        <div class="input-group" id="number-input-group">
+          <input type="number" id="answer-input" placeholder="Sua resposta..." autocomplete="off">
+          <button id="submit-btn" class="glow-btn">Enviar</button>
+        </div>
+
+        <!-- Botões para Respostas de Múltipla Escolha -->
+        <div class="mc-group" id="mc-input-group" style="display: none;">
+          <button class="mc-btn" onclick="checkMC(0)" id="mc-btn-0">A</button>
+          <button class="mc-btn" onclick="checkMC(1)" id="mc-btn-1">B</button>
+          <button class="mc-btn" onclick="checkMC(2)" id="mc-btn-2">C</button>
+        </div>
+      </div>
+
+      <!-- Barra de Ações com Compra de Fórmula -->
+      <div class="action-bar">
+        <button id="menu-btn" class="action-btn">🏠 Desistir</button>
+        <button id="buy-formula-btn" class="action-btn formula-btn-fx">📖 Fórmula (20 🪙)</button>
+        <button id="store-btn" class="action-btn store-btn-fx">🛒 Loja (L)</button>
+      </div>
+    </div>
+
+    <!-- Ecrã de Fim de Jogo -->
+    <div id="game-over-screen" class="screen">
+      <h1 class="game-over-title">Fim de Jogo</h1>
+      <p id="death-reason">O tempo esgotou!</p>
+      <div class="final-stats">
+        <p>Nível Alcançado: <span id="final-level">0</span></p>
+        <p>Pontuação Final: <span id="final-score">0</span></p>
+      </div>
+      <button id="restart-btn" class="glow-btn">Tentar Novamente</button>
+      <button id="return-menu-btn" class="outline-btn" style="margin-top:10px;">Voltar ao Menu</button>
+    </div>
+
+    <!-- Modal da Loja -->
+    <div id="store-modal" class="modal">
+      <div class="modal-content">
+        <h2>Loja em Tempo Real</h2>
+        <p class="warning-text">O tempo não para! Seja rápido!</p>
+        <p>Saldo: <span id="store-coins" style="color: #ffcc00; font-weight:bold;">0</span> 🪙</p>
+        <div class="store-items">
+          <button class="store-item" onclick="buyItem('freeze')">
+            <span>❄️ Congelar Tempo (10s)</span><span>60 🪙</span>
+          </button>
+          <button class="store-item" onclick="buyItem('multiplier')">
+            <span>💰 2x Moedas (3 turnos)</span><span>80 🪙</span>
+          </button>
+          <button class="store-item" onclick="buyItem('skip')">
+            <span>⏭️ Saltar Questão</span><span>100 🪙</span>
+          </button>
+          <button class="store-item" onclick="buyItem('shield')">
+            <span>🛡️ Escudo (1 Vida)</span><span>150 🪙</span>
+          </button>
+        </div>
+        <button id="close-store-btn" class="outline-btn">Voltar (L)</button>
+      </div>
+    </div>
+
+    <!-- Modal de Upgrades Permanentes -->
+    <div id="upgrades-modal" class="modal">
+      <div class="modal-content">
+        <h2>Laboratório de Upgrades</h2>
+        <p>Moedas Totais: <span id="upgrade-coins" style="color: #ffcc00; font-weight:bold;">0</span> 🪙</p>
+        <div class="store-items">
+          <button class="store-item" onclick="buyUpgrade('time')">
+            <span>⏳ +3s Tempo Inicial (Nv. <span id="upg-time-lvl">0</span>)</span><span id="upg-time-cost">100 🪙</span>
+          </button>
+          <button class="store-item" onclick="buyUpgrade('coinYield')">
+            <span>🤑 +1 Moeda Base (Nv. <span id="upg-coin-lvl">0</span>)</span><span id="upg-coin-cost">150 🪙</span>
+          </button>
+        </div>
+        <button id="close-upgrades-btn" class="outline-btn">Fechar</button>
+      </div>
+    </div>
+
+    <!-- Modal de Conquistas -->
+    <div id="achievements-modal" class="modal">
+      <div class="modal-content">
+        <h2>Troféus</h2>
+        <div id="achievements-list" class="achievements-list"></div>
+        <button id="close-achievements-btn" class="outline-btn">Fechar</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="toast-container"></div>
+
+  <!-- CÓDIGO JAVASCRIPT -->
+  <script>
+    let savedData = JSON.parse(localStorage.getItem('geometryRushData')) || {
+      coins: 0, highscore: 0, maxLevel: 1,
+      upgrades: { timeLvl: 0, coinYieldLvl: 0 },
+      achievements: {
+        first_blood: false, combo_master: false, rich: false, quick_genius: false, broke_math: false, shield_master: false
+      }
+    };
+    function saveData() { localStorage.setItem('geometryRushData', JSON.stringify(savedData)); }
+
+    const screens = { start: document.getElementById('start-screen'), game: document.getElementById('game-screen'), over: document.getElementById('game-over-screen') };
+    const modals = { store: document.getElementById('store-modal'), upgrades: document.getElementById('upgrades-modal'), achievements: document.getElementById('achievements-modal') };
+    const displays = {
+      level: document.getElementById('level-display'), coins: document.getElementById('coins-display'),
+      score: document.getElementById('score-display'), combo: document.getElementById('combo-display'),
+      question: document.getElementById('question-text'), timerBar: document.getElementById('timer-bar'), 
+      formula: document.getElementById('formula-display'), shape: document.getElementById('shape-container')
+    };
+    const inputs = {
+      numberGroup: document.getElementById('number-input-group'), number: document.getElementById('answer-input'),
+      mcGroup: document.getElementById('mc-input-group')
+    };
+
+    let state = {
+      level: 1, score: 0, combo: 1, currentAnswer: null,
+      currentFormula: "",
+      timeLeft: 0, maxTime: 0, timerInterval: null, 
+      freezeTimeLeft: 0, multiplierTurns: 0, hasShield: false,
+      questionStartTime: 0
+    };
+
+    const shapesSVG = {
+      cube: `<svg viewBox="0 0 100 100"><rect x="25" y="35" width="40" height="40"/><polygon points="25,35 45,15 85,15 85,55 65,75 25,75"/><line x1="65" y1="35" x2="85" y2="15"/><line x1="65" y1="35" x2="65" y2="75"/><line x1="65" y1="35" x2="25" y2="35"/></svg>`,
+      cylinder: `<svg viewBox="0 0 100 100"><ellipse cx="50" cy="25" rx="30" ry="10"/><ellipse cx="50" cy="75" rx="30" ry="10"/><line x1="20" y1="25" x2="20" y2="75"/><line x1="80" y1="25" x2="80" y2="75"/></svg>`,
+      cone: `<svg viewBox="0 0 100 100"><ellipse cx="50" cy="80" rx="30" ry="10"/><line x1="20" y1="80" x2="50" y2="20"/><line x1="80" y1="80" x2="50" y2="20"/></svg>`,
+      sphere: `<svg viewBox="0 0 100 100"><circle cx="50" cy="50" r="40"/><ellipse cx="50" cy="50" rx="40" ry="15" fill="none" stroke-dasharray="4"/></svg>`,
+      pyramid: `<svg viewBox="0 0 100 100"><polygon points="50,15 20,75 80,75"/><line x1="20" y1="75" x2="50" y2="90"/><line x1="80" y1="75" x2="50" y2="90"/><line x1="50" y1="15" x2="50" y2="90"/></svg>`,
+      prism: `<svg viewBox="0 0 100 100"><polygon points="30,20 70,20 85,40 45,40"/><polygon points="30,20 30,70 45,90 45,40"/><polygon points="45,90 85,90 85,40 45,40"/><line x1="70" y1="20" x2="70" y2="70" stroke-dasharray="2"/><line x1="70" y1="70" x2="85" y2="90" stroke-dasharray="2"/><line x1="30" y1="70" x2="70" y2="70" stroke-dasharray="2"/></svg>`
+    };
+
+    function getRandomInt(min, max) { return Math.floor(Math.random() * (max - min + 1)) + min; }
+
+    function generateQuestion() {
+      displays.formula.style.display = 'none';
+      inputs.number.value = '';
+      state.questionStartTime = Date.now();
+      state.currentFormula = ""; 
+
+      const isMC = Math.random() < 0.25; 
+      
+      if (isMC) {
+        generateFormulaQuestion();
+      } else {
+        generateMathQuestion();
+      }
+    }
+
+    function generateMathQuestion() {
+      inputs.mcGroup.style.display = 'none';
+      inputs.numberGroup.style.display = 'flex';
+      inputs.number.focus();
+
+      const types = ['cube', 'cylinder', 'cone', 'sphere', 'pyramid', 'prism'];
+      const type = types[getRandomInt(0, Math.min(types.length - 1, 1 + Math.floor(state.level/2)))]; 
+      const askType = getRandomInt(1, 3);
+
+      let text = "", answer = 0, svg = shapesSVG[type];
+
+      if (type === 'cube') {
+        const a = getRandomInt(2, 10);
+        if (askType === 1) { text = `Volume do cubo de aresta ${a}?`; answer = Math.pow(a, 3); state.currentFormula = "V = a³"; }
+        else if (askType === 2) { text = `Área Total do cubo de aresta ${a}?`; answer = 6 * Math.pow(a, 2); state.currentFormula = "A = 6 × a²"; }
+        else { text = `Um cubo tem volume ${Math.pow(a,3)}. Qual a sua aresta?`; answer = a; state.currentFormula = "a = ∛V"; }
+      } else if (type === 'cylinder') {
+        const r = getRandomInt(2, 6), h = getRandomInt(3, 10);
+        text = `Volume do cilindro (raio ${r}, altura ${h})? (π=3)`; answer = 3 * Math.pow(r, 2) * h; state.currentFormula = "V = π × r² × h";
+      } else if (type === 'cone') {
+        const r = getRandomInt(2, 8), h = getRandomInt(2, 9);
+        text = `Volume do cone (raio ${r}, altura ${h})? (π=3)`; answer = Math.pow(r, 2) * h; state.currentFormula = "V = (π × r² × h) / 3";
+      } else if (type === 'sphere') {
+        const r = getRandomInt(2, 6);
+        text = `Volume da esfera de raio ${r}? (π=3)`; answer = 4 * Math.pow(r, 3); state.currentFormula = "V = 4/3 × π × r³";
+      } else if (type === 'pyramid') {
+        const l = getRandomInt(3, 8), h = getRandomInt(3, 9);
+        text = `Volume da pirâmide quadrada (lado ${l}, altura ${h})?`; answer = (Math.pow(l, 2) * h) / 3;
+        if (answer % 1 !== 0) answer = Math.round(answer); 
+        state.currentFormula = "V = (Lado² × Altura) / 3";
+      } else if (type === 'prism') {
+        const b = getRandomInt(2, 6), h = getRandomInt(4, 10), prof = getRandomInt(3, 8);
+        text = `Volume do prisma retangular (${b} x ${h} x ${prof})?`; answer = b * h * prof;
+        state.currentFormula = "V = Largura × Altura × Profundidade";
+      }
+
+      state.currentAnswer = answer;
+      displays.question.textContent = text; displays.shape.innerHTML = svg;
+    }
+
+    function generateFormulaQuestion() {
+      inputs.numberGroup.style.display = 'none';
+      inputs.mcGroup.style.display = 'flex';
+      displays.shape.innerHTML = shapesSVG.cube; 
+
+      const questions = [
+        { q: "A fórmula 'V = a³' pertence a qual sólido?", opts: ["Cubo", "Esfera", "Cone"], ans: 0 },
+        { q: "A fórmula 'A = 6 × a²' calcula o quê?", opts: ["Área do Cilindro", "Área do Cubo", "Volume do Prisma"], ans: 1 },
+        { q: "Qual a fórmula do Volume da Esfera?", opts: ["V = π r² h", "V = 4/3 π r³", "V = 1/3 π r² h"], ans: 1 },
+        { q: "O que calcula 'π r² h'?", opts: ["Volume do Cilindro", "Área do Cone", "Volume da Pirâmide"], ans: 0 }
+      ];
+
+      const q = questions[getRandomInt(0, questions.length - 1)];
+      displays.question.textContent = q.q;
+      state.currentAnswer = q.ans; 
+
+      document.getElementById('mc-btn-0').textContent = q.opts[0];
+      document.getElementById('mc-btn-1').textContent = q.opts[1];
+      document.getElementById('mc-btn-2').textContent = q.opts[2];
+    }
+
+    function initMenus() {
+      document.getElementById('save-highscore').textContent = savedData.highscore;
+      document.getElementById('save-maxlevel').textContent = savedData.maxLevel;
+      document.getElementById('save-coins').textContent = savedData.coins;
+    }
+
+    function startTimer() {
+      clearInterval(state.timerInterval);
+      state.timerInterval = setInterval(() => {
+        if (state.freezeTimeLeft > 0) {
+          state.freezeTimeLeft -= 0.1;
+          displays.timerBar.classList.add('timer-frozen');
+          document.getElementById('freeze-indicator').style.display = 'inline-block';
+          if (state.freezeTimeLeft <= 0) displays.timerBar.classList.remove('timer-frozen');
+          return;
+        }
+        
+        document.getElementById('freeze-indicator').style.display = 'none';
+        state.timeLeft -= 0.1; 
+        updateTimerUI();
+        
+        if (state.timeLeft <= 0) handleDeath();
+      }, 100);
+    }
+
+    function updateTimerUI() {
+      const pct = (state.timeLeft / state.maxTime) * 100;
+      displays.timerBar.style.width = `${pct}%`;
+      displays.timerBar.classList.toggle('timer-danger', pct < 25 && state.freezeTimeLeft <= 0);
+      
+      if(pct < 25 && state.freezeTimeLeft <= 0) document.body.classList.add('shake');
+      else document.body.classList.remove('shake');
+    }
+
+    function startGame() {
+      const startBonusTime = savedData.upgrades.timeLvl * 3;
+      state = { 
+        level: 1, score: 0, combo: 1, currentAnswer: null, currentFormula: "",
+        maxTime: 25 + startBonusTime, timeLeft: 25 + startBonusTime, 
+        timerInterval: null, freezeTimeLeft: 0, multiplierTurns: 0, hasShield: false 
+      };
+      
+      updateUI(); switchScreen('game'); generateQuestion(); startTimer();
+      document.getElementById('shield-indicator').style.display = 'none';
+      document.getElementById('mult-indicator').style.display = 'none';
+      modals.store.classList.remove('active');
+    }
+
+    function triggerShake() {
+      document.body.classList.remove('shake');
+      void document.body.offsetWidth; 
+      document.body.classList.add('shake');
+      setTimeout(() => document.body.classList.remove('shake'), 400);
+    }
+
+    window.checkMC = function(index) { processAnswer(index === state.currentAnswer); };
+
+    function checkNumberAnswer() {
+      const ans = parseInt(inputs.number.value, 10);
+      if (isNaN(ans)) return;
+      processAnswer(ans === state.currentAnswer);
+    }
+
+    function processAnswer(isCorrect) {
+      if (isCorrect) {
+        const timeTaken = (Date.now() - state.questionStartTime) / 1000;
+        if (timeTaken < 2) unlockAchievement('quick_genius');
+        if (state.level === 1) unlockAchievement('first_blood');
+
+        let baseCoins = 5 + savedData.upgrades.coinYieldLvl;
+        let earnedCoins = baseCoins + Math.floor(state.combo / 2);
+        if (state.multiplierTurns > 0) { earnedCoins *= 2; state.multiplierTurns--; }
+        
+        savedData.coins += earnedCoins;
+        state.score += (10 * state.level * state.combo); 
+        state.combo++; state.level++;
+        
+        if (state.combo >= 5) {
+          unlockAchievement('combo_master');
+          document.getElementById('combo-container').classList.add('combo-glowing');
+        }
+
+        state.maxTime = Math.max(8, (25 + (savedData.upgrades.timeLvl * 3)) - Math.floor(state.level / 2));
+        state.timeLeft = state.maxTime;
+
+        updateUI(); generateQuestion(); saveData();
+      } else {
+        triggerShake();
+        handleDeath();
+      }
+    }
+
+    function handleDeath() {
+      if (state.hasShield) {
+        state.hasShield = false; state.combo = 1; state.timeLeft = state.maxTime;
+        document.getElementById('shield-indicator').style.display = 'none';
+        document.getElementById('combo-container').classList.remove('combo-glowing');
+        unlockAchievement('shield_master');
+        showToast("🛡️ Escudo consumido! Sobreviveste!"); 
+        updateUI(); inputs.number.value = '';
+      } else {
+        clearInterval(state.timerInterval);
+        document.body.classList.remove('shake');
+        
+        if (savedData.coins === 0 && state.level >= 10) unlockAchievement('broke_math');
+        if (state.score > savedData.highscore) savedData.highscore = state.score;
+        if (state.level > savedData.maxLevel) savedData.maxLevel = state.level;
+        saveData(); initMenus();
+
+        document.getElementById('final-level').textContent = state.level;
+        document.getElementById('final-score').textContent = state.score;
+        switchScreen('over');
+      }
+    }
+
+    document.getElementById('buy-formula-btn').addEventListener('click', () => {
+      if (displays.formula.style.display === 'block') {
+        showToast("A fórmula já está visível!");
+        return;
+      }
+      if (inputs.mcGroup.style.display === 'flex' || state.currentFormula === "") {
+        showToast("Sem fórmula disponível para esta pergunta!");
+        return;
+      }
+
+      if (savedData.coins >= 20) {
+        savedData.coins -= 20;
+        displays.formula.textContent = `Dica: ${state.currentFormula}`;
+        displays.formula.style.display = 'block';
+        updateUI();
+        saveData();
+        showToast("📖 Fórmula revelada!");
+        inputs.number.focus();
+      } else {
+        triggerShake();
+        showToast("🪙 Precisas de 20 moedas para ver a fórmula!");
+      }
+    });
+
+    function toggleStore() {
+      const isOpen = modals.store.classList.contains('active');
+      if (isOpen) {
+        modals.store.classList.remove('active');
+        inputs.number.focus();
+      } else {
+        document.getElementById('store-coins').textContent = savedData.coins;
+        modals.store.classList.add('active');
+      }
+    }
+
+    window.buyItem = function(item) {
+      const costs = { freeze: 60, multiplier: 80, skip: 100, shield: 150 };
+      if (savedData.coins >= costs[item]) {
+        savedData.coins -= costs[item];
+        
+        if (item === 'freeze') { state.freezeTimeLeft += 10; }
+        if (item === 'multiplier') { 
+          state.multiplierTurns += 3; 
+          document.getElementById('mult-indicator').style.display = 'inline-block';
+        }
+        if (item === 'skip') { 
+          state.level++; state.timeLeft = state.maxTime; generateQuestion(); 
+        }
+        if (item === 'shield') { 
+          state.hasShield = true; 
+          document.getElementById('shield-indicator').style.display = 'inline-block'; 
+        }
+        
+        document.getElementById('store-coins').textContent = savedData.coins; 
+        updateUI(); showToast("Compra realizada!"); saveData();
+      } else {
+        triggerShake(); showToast("🪙 Moedas insuficientes!");
+      }
+    };
+
+    window.buyUpgrade = function(type) {
+      const costs = { time: 100 + (savedData.upgrades.timeLvl * 50), coinYield: 150 + (savedData.upgrades.coinYieldLvl * 100) };
+      if (savedData.coins >= costs[type]) {
+        savedData.coins -= costs[type];
+        if (type === 'time') savedData.upgrades.timeLvl++;
+        if (type === 'coinYield') savedData.upgrades.coinYieldLvl++;
+        
+        saveData(); updateUpgradesUI(); showToast("Upgrade Permanente Adquirido!");
+      } else { showToast("Moedas insuficientes!"); }
+    }
+
+    function updateUpgradesUI() {
+      document.getElementById('upgrade-coins').textContent = savedData.coins;
+      document.getElementById('upg-time-lvl').textContent = savedData.upgrades.timeLvl;
+      document.getElementById('upg-time-cost').textContent = `${100 + (savedData.upgrades.timeLvl * 50)} 🪙`;
+      document.getElementById('upg-coin-lvl').textContent = savedData.upgrades.coinYieldLvl;
+      document.getElementById('upg-coin-cost').textContent = `${150 + (savedData.upgrades.coinYieldLvl * 100)} 🪙`;
+    }
+
+    function updateUI() {
+      displays.level.textContent = state.level; displays.coins.textContent = savedData.coins;
+      displays.score.textContent = state.score; displays.combo.textContent = `x${state.combo}`;
+      document.getElementById('mult-count').textContent = state.multiplierTurns;
+      if(state.multiplierTurns <= 0) document.getElementById('mult-indicator').style.display = 'none';
+    }
+
+    function switchScreen(screenName) {
+      Object.values(screens).forEach(s => s.classList.remove('active'));
+      screens[screenName].classList.add('active');
+    }
+
+    function unlockAchievement(id) {
+      const ach = {
+        first_blood: { title: "Primeiro Passo", desc: "Acertou a primeira questão." },
+        combo_master: { title: "Mestre do Combo", desc: "Alcançou Combo x5." },
+        quick_genius: { title: "Génio Rápido", desc: "Respondeu em menos de 2 segundos." },
+        broke_math: { title: "Matemático Falido", desc: "Chegou ao nível 10 com 0 moedas." },
+        shield_master: { title: "Mestre do Escudo", desc: "Sobreviveu a um erro usando o Escudo." }
+      };
+      if (!savedData.achievements[id]) {
+        savedData.achievements[id] = true; 
+        saveData(); showToast(`🏆 Troféu: ${ach[id].title}`);
+      }
+    }
+
+    function showToast(msg) {
+      const container = document.getElementById('toast-container');
+      const toast = document.createElement('div');
+      toast.className = 'toast'; toast.textContent = msg; container.appendChild(toast);
+      setTimeout(() => toast.remove(), 3000);
+    }
+
+    initMenus();
+    document.getElementById('start-btn').addEventListener('click', startGame);
+    document.getElementById('restart-btn').addEventListener('click', startGame);
+    document.getElementById('return-menu-btn').addEventListener('click', () => { initMenus(); switchScreen('start'); });
+    document.getElementById('submit-btn').addEventListener('click', checkNumberAnswer);
+    inputs.number.addEventListener('keypress', (e) => { if (e.key === 'Enter') checkNumberAnswer(); });
+
+    document.getElementById('menu-btn').addEventListener('click', () => { clearInterval(state.timerInterval); switchScreen('start'); initMenus(); });
+    document.getElementById('store-btn').addEventListener('click', toggleStore);
+    document.getElementById('close-store-btn').addEventListener('click', toggleStore);
+
+    document.addEventListener('keydown', (e) => {
+      if (!screens.game.classList.contains('active')) return;
+      if (e.key.toLowerCase() === 'l') { e.preventDefault(); toggleStore(); }
+      if (e.key.toLowerCase() === 'm') { e.preventDefault(); clearInterval(state.timerInterval); switchScreen('start'); initMenus(); }
+    });
+
+    document.getElementById('upgrades-menu-btn').addEventListener('click', () => { updateUpgradesUI(); modals.upgrades.classList.add('active'); });
+    document.getElementById('close-upgrades-btn').addEventListener('click', () => { modals.upgrades.classList.remove('active'); initMenus(); });
+
+    document.getElementById('achievements-menu-btn').addEventListener('click', () => {
+      const list = document.getElementById('achievements-list'); list.innerHTML = '';
+      const achData = {
+        first_blood: { title: "Primeiro Passo", desc: "Acertou a primeira questão." },
+        combo_master: { title: "Mestre do Combo", desc: "Alcançou Combo x5." },
+        quick_genius: { title: "Génio Rápido", desc: "Respondeu em menos de 2 segundos." },
+        broke_math: { title: "Matemático Falido", desc: "Chegou ao Nv.10 com 0 moedas." },
+        shield_master: { title: "Mestre do Escudo", desc: "Sobreviveu graças ao Escudo." }
+      };
+      Object.keys(achData).forEach(key => {
+        const isUnlocked = savedData.achievements[key];
+        list.innerHTML += `<div class="ach ${isUnlocked ? 'unlocked' : ''}"><h4>${achData[key].title}</h4><p>${achData[key].desc}</p></div>`;
+      });
+      modals.achievements.classList.add('active');
+    });
+    document.getElementById('close-achievements-btn').addEventListener('click', () => modals.achievements.classList.remove('active'));
+  </script>
+</body>
+</html>
